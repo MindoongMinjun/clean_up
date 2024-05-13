@@ -1,15 +1,14 @@
-import 'dart:math';
-
+// ignore_for_file: avoid_print, no_leading_underscores_for_local_identifiers
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:dio/dio.dart';
-
-import 'package:kyonggi_project/testdata/test_data.dart';
-import 'package:kyonggi_project/widgets/bottom_nav_bar.dart';
+import 'package:kyonggi_project/models/dust_info.dart';
+import 'package:kyonggi_project/models/weather_info.dart';
+import 'package:kyonggi_project/services/dust_info_service.dart';
+import 'package:kyonggi_project/services/weather_info.dart';
 import 'package:kyonggi_project/widgets/box.dart';
-// ignore: unused_import
-import 'package:charts_flutter/flutter.dart' as charts;
-// ignore: unused_import
-import 'package:kyonggi_project/LineChartData/pollution_line_chart.dart';
+import 'package:kyonggi_project/widgets/nav_pollution_charts.dart';
+import 'package:kyonggi_project/widgets/parkingdata.dart';
+import 'package:kyonggi_project/widgets/pollution_chart.dart';
 
 class MainScreen extends StatefulWidget {
   const MainScreen({super.key});
@@ -18,49 +17,48 @@ class MainScreen extends StatefulWidget {
   State<MainScreen> createState() => _MainScreenState();
 }
 
-class _MainScreenState extends State<MainScreen> {
-  bool isAmPm1 = false;
-  bool isAmPm2 = false;
-  late int month;
-  late int day;
+int month = 3;
+int day = 7;
+int hour = 0;
+int minute = 0;
 
-  DateTime selectedDate = DateTime.now();
+class _MainScreenState extends State<MainScreen> {
+  @override
+  void dispose() {
+    super.dispose();
+  }
+
+  @override
+  void initState() {
+    super.initState();
+  }
+
+  Widget _selectTime(BuildContext context) {
+    return CupertinoTimerPicker(
+      mode: CupertinoTimerPickerMode.hm,
+      minuteInterval: 30,
+      onTimerDurationChanged: (value) {
+        setState(() {
+          hour = value.inHours;
+          minute = value.inMinutes % 60;
+        });
+      },
+    );
+  }
 
   Future<void> _selectDate(BuildContext context) async {
     final DateTime? pickedDate = await showDatePicker(
+      barrierDismissible: false,
       context: context,
-      initialDate: selectedDate,
-      firstDate: DateTime(2023),
-      lastDate: DateTime(2025),
+      initialDate: DateTime(2024, 3, 7),
+      firstDate: DateTime(2024, 3, 7),
+      lastDate: DateTime(2024, 4, 30),
     );
-
     if (pickedDate != null) {
-      selectedDate = pickedDate;
-      setState(() {});
-    }
-  }
-
-  void _makeAPIRequest(bool isAmPm1, int month, int day) async {
-    // API 요청 URL 및 파라미터 설정
-    String url = "http://localhost:8080/parkinglot/info";
-    Map<String, dynamic> body = {
-      "isPm": isAmPm1,
-      "month": month,
-      "day": day,
-    };
-    // API 요청 보내기
-    try {
-      Response response = await Dio().post(url, data: body);
-      if (response.statusCode == 200) {
-        // API 요청 성공 처리
-        print("API 요청 성공: ${response.data}");
-      } else {
-        // API 요청 실패 처리
-        print("API 요청 실패: ${response.statusCode}");
-      }
-    } catch (error) {
-      // API 요청 오류 처리
-      print("API 요청 오류: $error");
+      setState(() {
+        month = pickedDate.month;
+        day = pickedDate.day;
+      });
     }
   }
 
@@ -68,20 +66,169 @@ class _MainScreenState extends State<MainScreen> {
   Widget build(BuildContext context) {
     double width = MediaQuery.of(context).size.width;
     double height = MediaQuery.of(context).size.height;
+    int _month = 3;
+    int _day = 7;
+    int _hour = 0;
+    int _minute = 0;
     return Scaffold(
       backgroundColor: Theme.of(context).primaryColor,
-      body: Stack(
+      body: PageView(
         children: [
           SafeArea(
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20),
               child: Column(
+                mainAxisAlignment: MainAxisAlignment.end,
                 children: [
-                  const Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text('나의 위치', style: TextStyle(fontSize: 28)),
-                      Text('성남시', style: TextStyle(fontSize: 18)),
+                      Box(
+                        width: width * 0.43,
+                        height: height * 0.12,
+                        widget: Center(
+                          child: Column(
+                            children: [
+                              const Text(
+                                '현재 미세먼지',
+                                style: TextStyle(
+                                  color: Colors.black,
+                                ),
+                              ),
+                              FutureBuilder<DustInfo>(
+                                future: fetchDustInfo(),
+                                builder: (context, snapshot) {
+                                  if (snapshot.hasData) {
+                                    final data = snapshot.data!;
+                                    return Padding(
+                                      padding: const EdgeInsets.all(20),
+                                      child: Column(
+                                        children: [
+                                          Row(
+                                            mainAxisAlignment:
+                                                MainAxisAlignment.center,
+                                            children: [
+                                              const Text(
+                                                'NOx',
+                                                style: TextStyle(
+                                                    color: Colors.black),
+                                              ),
+                                              const SizedBox(width: 10),
+                                              Text(
+                                                data.nox,
+                                                style: const TextStyle(
+                                                    color: Colors.black),
+                                              ),
+                                            ],
+                                          ),
+                                          Row(
+                                            mainAxisAlignment:
+                                                MainAxisAlignment.center,
+                                            children: [
+                                              const Text(
+                                                'SOx',
+                                                style: TextStyle(
+                                                    color: Colors.black),
+                                              ),
+                                              const SizedBox(width: 10),
+                                              Text(
+                                                data.sox,
+                                                style: const TextStyle(
+                                                    color: Colors.black),
+                                              ),
+                                            ],
+                                          ),
+                                        ],
+                                      ),
+                                    );
+                                  } else if (snapshot.hasError) {
+                                    return Text('${snapshot.error}',
+                                        style: const TextStyle(
+                                            color: Colors.black)); // 오류 처리
+                                  }
+                                  // 데이터 로딩 중 표시할 위젯
+                                  return const Center(
+                                      child: CircularProgressIndicator());
+                                },
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      Box(
+                        width: width * 0.43,
+                        height: height * 0.12,
+                        widget: Center(
+                          child: Column(
+                            children: [
+                              const Text(
+                                '현재 날씨',
+                                style: TextStyle(
+                                  color: Colors.black,
+                                ),
+                              ),
+                              FutureBuilder<WeatherInfo>(
+                                future: fetchWeatherInfo(),
+                                builder: (context, snapshot) {
+                                  if (snapshot.hasData) {
+                                    final data = snapshot.data!;
+                                    return Padding(
+                                      padding: const EdgeInsets.all(20),
+                                      child: Column(
+                                        children: [
+                                          Row(
+                                            mainAxisAlignment:
+                                                MainAxisAlignment.center,
+                                            children: [
+                                              const Text(
+                                                '기온',
+                                                style: TextStyle(
+                                                    color: Colors.black),
+                                              ),
+                                              const SizedBox(width: 10),
+                                              Text(
+                                                data.temp,
+                                                style: const TextStyle(
+                                                    color: Colors.black),
+                                              ),
+                                            ],
+                                          ),
+                                          Row(
+                                            mainAxisAlignment:
+                                                MainAxisAlignment.center,
+                                            children: [
+                                              const Text(
+                                                '습도',
+                                                style: TextStyle(
+                                                    color: Colors.black),
+                                              ),
+                                              const SizedBox(width: 10),
+                                              Text(
+                                                data.humidity,
+                                                style: const TextStyle(
+                                                    color: Colors.black),
+                                              ),
+                                            ],
+                                          ),
+                                        ],
+                                      ),
+                                    );
+                                  } else if (snapshot.hasError) {
+                                    return Text(
+                                      '${snapshot.error}',
+                                      style:
+                                          const TextStyle(color: Colors.black),
+                                    ); // 오류 처리
+                                  }
+                                  // 데이터 로딩 중 표시할 위젯
+                                  return const Center(
+                                      child: CircularProgressIndicator());
+                                },
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
                     ],
                   ),
                   Padding(
@@ -92,25 +239,59 @@ class _MainScreenState extends State<MainScreen> {
                       children: [
                         ElevatedButton(
                           onPressed: () {
-                            _selectDate(context).then((context) {
-                              setState(() {
-                                month = selectedDate.month;
-                                day = selectedDate.day;
-                              });
-                            }).then((context) {
-                              _makeAPIRequest(isAmPm1, selectedDate.month,
-                                  selectedDate.day);
-                            });
+                            _selectDate(context);
                           },
-                          child: const Text('Select Date'),
+                          child: const Text('Date'),
                         ),
+                        const SizedBox(width: 10),
+                        ElevatedButton(
+                          onPressed: () {
+                            showDialog(
+                              context: context,
+                              builder: (BuildContext context) {
+                                return Dialog(
+                                  child: Box(
+                                    width: width * 0.8,
+                                    height: height * 0.2,
+                                    widget: _selectTime(context),
+                                  ),
+                                );
+                              },
+                            );
+                          },
+                          child: const Text('Time'),
+                        ),
+                        const SizedBox(width: 10),
+                        Container(
+                          width: 150,
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: Padding(
+                            padding: const EdgeInsets.all(8.0),
+                            child: Center(
+                              child: Text(
+                                '$_month월 $_day일 $_hour시 $_minute분',
+                                style: const TextStyle(
+                                  color: Colors.black,
+                                ),
+                              ),
+                            ),
+                          ),
+                        )
                       ],
                     ),
                   ),
                   Box(
                     width: width,
-                    height: height * 0.2,
-                    widget: const ParkingDataWidget(),
+                    height: height * 0.17,
+                    widget: ParkingDataWidget(
+                      month: _month,
+                      day: _day,
+                      hour: _hour,
+                      minute: _minute,
+                    ),
                   ),
                   const SizedBox(
                     height: 20,
@@ -118,22 +299,24 @@ class _MainScreenState extends State<MainScreen> {
                   Box(
                     width: width,
                     height: height * 0.5,
-                    widget: Container(),
+                    widget: PollutionCharts(
+                      month: _month,
+                      day: _day,
+                      hour: _hour,
+                      minute: _minute,
+                    ),
                   ),
-                  // Box(
-                  //   widget: PollutionLineChart(),
-                  //   height: height * 0.35,
-                  //   width: width,
-                  // )
                 ],
               ),
             ),
           ),
-          const Positioned(
-            left: 0,
-            right: 0,
-            bottom: 0,
-            child: BottomNavBar(),
+          SafeArea(
+            child: NavPollutionCharts(
+              month: _month,
+              day: _day,
+              hour: _hour,
+              minute: _minute,
+            ),
           ),
         ],
       ),

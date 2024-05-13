@@ -1,8 +1,10 @@
+// ignore_for_file: no_leading_underscores_for_local_identifiers
+
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:kyonggi_project/LineChartData/pollution_line_chart.dart';
-import 'package:kyonggi_project/services/temperature.dart';
 import 'package:kyonggi_project/widgets/box.dart';
-import 'package:charts_flutter/flutter.dart' as charts;
+import 'package:kyonggi_project/widgets/input_infos.dart';
+import 'package:kyonggi_project/widgets/nav_pollution_charts.dart';
 
 class BottomNavBar extends StatefulWidget {
   const BottomNavBar({super.key});
@@ -12,6 +14,51 @@ class BottomNavBar extends StatefulWidget {
 }
 
 class _BottomNavBarState extends State<BottomNavBar> {
+  int month = 3;
+  int day = 7;
+  int hour = 0;
+  int minute = 0;
+  @override
+  void dispose() {
+    super.dispose();
+  }
+
+  @override
+  void initState() {
+    super.initState();
+  }
+
+  Widget _selectTime(BuildContext context) {
+    return CupertinoTimerPicker(
+      mode: CupertinoTimerPickerMode.hm,
+      minuteInterval: 30,
+      onTimerDurationChanged: (value) {
+        setState(() {
+          //_timeAPIRequest(value.inHours, value.inMinutes % 60);
+          hour = value.inHours;
+          minute = value.inMinutes % 60;
+        });
+      },
+    );
+  }
+
+  Future<void> _selectDate(BuildContext context) async {
+    final DateTime? pickedDate = await showDatePicker(
+      barrierDismissible: false,
+      context: context,
+      initialDate: DateTime(2024, 3, 7),
+      firstDate: DateTime(2024, 3, 7),
+      lastDate: DateTime(2024, 4, 30),
+    );
+    if (pickedDate != null) {
+      //_dateAPIRequest(pickedDate.month, pickedDate.day);
+      setState(() {
+        month = pickedDate.month;
+        day = pickedDate.day;
+      });
+    }
+  }
+
   double bottomNavbarHeight = 50;
   bool isActivated = true;
 
@@ -19,6 +66,10 @@ class _BottomNavBarState extends State<BottomNavBar> {
   Widget build(BuildContext context) {
     double width = MediaQuery.of(context).size.width;
     double height = MediaQuery.of(context).size.height;
+    int _month = 3;
+    int _day = 7;
+    int _hour = 0;
+    int _minute = 0;
     return AnimatedContainer(
       duration: const Duration(milliseconds: 200), // 애니메이션의 길이 설정
       height: bottomNavbarHeight, // 애니메이션의 높이 설정
@@ -37,7 +88,7 @@ class _BottomNavBarState extends State<BottomNavBar> {
               setState(
                 () {
                   bottomNavbarHeight =
-                      bottomNavbarHeight == 50 ? height * 0.8 : 50;
+                      bottomNavbarHeight == 50 ? height * 0.85 : 50;
                   isActivated = !isActivated;
                 },
               );
@@ -64,64 +115,58 @@ class _BottomNavBarState extends State<BottomNavBar> {
                         children: [
                           ElevatedButton(
                             onPressed: () {
-                              showDialog(
-                                  context: context,
-                                  builder: (BuildContext context) {
-                                    return DatePickerDialog(
-                                      firstDate: DateTime(2024, 1, 1),
-                                      lastDate: DateTime(2024, 1, 1),
-                                    );
-                                  });
+                              _selectDate(context);
                             },
-                            child: const Text('Select Date'),
+                            child: const Text('Date'),
                           ),
-                          const SizedBox(width: 20),
+                          const SizedBox(width: 10),
                           ElevatedButton(
                             onPressed: () {
-                              showTimePicker(
+                              showDialog(
                                 context: context,
-                                initialTime: TimeOfDay.now(),
+                                builder: (BuildContext context) {
+                                  return Dialog(
+                                    child: Box(
+                                      width: width * 0.8,
+                                      height: height * 0.2,
+                                      widget: _selectTime(context),
+                                    ),
+                                  );
+                                },
                               );
                             },
-                            child: const Text('Select Time'),
+                            child: const Text('Time'),
+                          ),
+                          const SizedBox(width: 10),
+                          ElevatedButton(
+                            onPressed: () {
+                              showDialog(
+                                context: context,
+                                builder: (BuildContext context) {
+                                  return Dialog(
+                                    child: Box(
+                                      width: width * 0.8,
+                                      height: height * 0.55,
+                                      widget: const InputInfos(),
+                                    ),
+                                  );
+                                },
+                              );
+                            },
+                            child: const Text("Infos"),
                           )
                         ],
                       ),
                       SizedBox(height: height * 0.01),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Box(
-                            width: width * 0.16,
-                            height: height * 0.08,
-                            widget: const Temperature(),
-                          ),
-                          Box(
-                            width: width * 0.16,
-                            height: height * 0.08,
-                            widget: const Temperature(),
-                          ),
-                          Box(
-                            width: width * 0.16,
-                            height: height * 0.08,
-                            widget: const Temperature(),
-                          ),
-                          Box(
-                            width: width * 0.16,
-                            height: height * 0.08,
-                            widget: const Temperature(),
-                          ),
-                          Box(
-                            width: width * 0.16,
-                            height: height * 0.08,
-                            widget: const Temperature(),
-                          ),
-                        ],
-                      ),
                       SizedBox(height: height * 0.01),
                       Box(
-                        widget: Container(),
-                        height: height * 0.35,
+                        widget: NavPollutionCharts(
+                          month: _month,
+                          day: _day,
+                          hour: _hour,
+                          minute: _minute,
+                        ),
+                        height: height * 0.6,
                         width: width,
                       ),
                     ],
